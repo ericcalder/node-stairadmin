@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title><%= title %></title>
+ <style>
+    .ui-autocomplete {
+z-index: 2147483647;
+}
+ </style>
+ 
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <link rel='stylesheet' href="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css">
+    <link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+   
+
+    <style>
+  body  {padding-top:10px;
+          padding-left:30px;}
+ .temp tbody tr:hover {
+    background-color: yellow;
+}
+.csv tbody tr:hover {
+    background-color: yellow;
+}
+#payment_ .modal-body #pay tbody tr:hover {
+ background-color: lightblue; 
+}
+  
+</style>
+  	 
+  </head>
+  <body>
+    
+
+  <h2>Bank CSV download</h2>
+  <input id='fileLoad' type='file' accept='.csv'>
+
+  
+  
+  <div class="table-responsive">
+    <div class='csv'>
+      <h3></h3>
+        <table class='table'>
+          <thead>
+            <th>custID</th>
+            <th>Date</th>
+            <th>Amt</th>
+            <th>Transaction</th>
+            <th>Inv #</th>
+            <th>Name</th>
+          </thead>
+          <tbody>
+          </tbody>
+        </table>
+        
+        <button class='btn' id='test'>Import to temp</button>
+        <button class='btn' id='payments'>show payments tbl</button>
+    </div>
+  </div>
+    <div class='temp'>
+      <h3></h3>
+        <table class='table'>
+          <thead>
+            <th>tempId</th>
+            <th>CustID</th>
+            <th>Date</th>
+            <th>Amt</th>
+            <th>Transaction</th>
+          </thead>
+          <tbody></tbody>
+        </table> 
+        <button id='append'>Append to payments</button> 
+    </div> 
+    <div class='payments'>
+      <h3></h3>
+        <table class='table'>
+          <thead>
+            <th>paymentsId</th>
+            <th>CustID</th>
+            <th>Date</th>
+            <th>Amt</th>
+            <th>Transaction</th>
+          </thead>
+          <tbody></tbody>
+        </table>  
+    </div> 
+   <div class="container">
+         <% include ../views/modals/has_custID %>
+        <% include ../views/modals/has_no_custID %>  
+   </div> 
+  </body>
+
+
+
+  <script>
+ $(document).ready(function(){
+
+$('.csv, .temp, .payments').hide();
+
+$('#fileLoad').change(function(e){
+         console.log('in fileLoad');
+         var fileName=e.target.files[0].name;
+         console.log(fileName);
+         $.get('csv/download',{fileName: fileName},function(data){
+            console.log('in get data:::::');
+            console.log('length='+data.length)
+            console.log('length='+data[0][0])
+            $('body').data({pdata:data}); // save pdata
+            $('.csv').show();
+            $('.csv h3').append(data.length);
+            for(var i=0; i<data.length;i++){
+              $('.csv .table tbody').append(
+                '<tr><td>'+
+                '</td><td>'+data[i][0]+'</td><td>'+data[i][1]+
+                '</td><td>'+data[i][2]+'</td><td>'+
+                data[i][2].match(/\d{8}/))+'</td></tr>'
+            }//for
+            selectTR(data);
+         })// get csv/download
+       //selectTR();
+       });
+
+
+$('.csv #test').on('click', function(){
+  console.log('in test')
+  var arr=getD($('body').data().pdata)
+ console.log('custarr=='+arr[1])
+ $.post('csv/import',{paydata: JSON.stringify(arr)}, function(data){
+    console.log('in post ++++')
+    console.log('number of rec_added='+data.length)
+    console.log('rec_added='+data)
+    console.log('rec details:'+data[0][4])
+    /*
+    $('.payments').show();
+            $('.payments h3').append('payments added to temp: '+data.length);
+            for(var i=0; i<data.length;i++){
+              $('.payments .table tbody').append(
+                '<tr><td>'+data[i][0]+'</td><td>'+data[i][1]+
+                '</td><td>'+data[i][2]+'</td><td>'+data[i][3]+
+                '</td><td>'+data[i][4]+'</td></tr>')
+            }//for
+    */
+    showPayments(data);
+ })
+
+})
+
+$('.csv #payments').on('click', function(){
+  console.log('in payments')
+  var limit=40;
+  $.get('csv/payments',{limit},function(data){
+    console.log('in get payments ++++')
+    console.log('data.length='+data.length)
+    $('.payments').show();
+    console.log('data[0]='+data[0].id)
+            $('.payments h3').empty()
+                .append('payments table: '+data.length);
+            for(var i=0; i<data.length;i++){
+              $('.payments .table tbody').append(
+                '<tr><td>'+data[i].id+'</td><td>'+data[i].custID+
+                '</td><td>'+mySqlToCsv(data[i].tdate)+'</td><td>'+data[i].amt+
+                '</td><td>'+data[i].trans+'</td></tr>')
+            }//for
+  })
+
+});
+
+function showPayments(data){
+  $('.temp').show();
+            $('.temp h3').empty()
+                .append('payments added to temp: '+data.length);
+            for(var i=0; i<data.length;i++){
+              $('.temp .table tbody').append(
+                '<tr><td>'+data[i][0]+'</td><td>'+data[i][1]+
+                '</td><td>'+data[i][2]+'</td><td>'+data[i][3]+
+                '</td><td>'+data[i][4]+'</td></tr>')
+            }//for
+
+  $('.temp button#append').on('click', function(){
+    console.log('append button click')
+    $.post('csv/append',{payrows:JSON.stringify(data)},function(data){
+      console.log('in post data.length='+data.length)
+    })
+  })
+  /*
+  $('.temp .table tbody tr').on('click',function(){
+    console.log('temp tr click')
+    var tr={}
+    tr.custID=$(this).find('td:eq(1)').text();
+    tr.date=$(this).find('td:eq(2)').text();
+    tr.amt=$(this).find('td:eq(3)').text();
+    console.log('tr==='+$(this).find('td:eq(1)').text())
+    console.log('tr obj=='+tr.custID+'  '+tr.date+'   '+tr.amt)
+    $.get('csv/fetch_dup',{tr},function(data){
+      console.log('in fetch ++++')
+    console.log('data.length='+data.length)
+    if(data.length){
+    console.log('data=='+mySqlToCsv(data[0].tdate))
+    confirm('duplicate payment?<br>'+data[0].id+' '+data[0].custID+
+      '  '+mySqlToCsv(data[0].tdate)+' '+
+      data[0].amt+'  '+data[0].trans);
+    }
+    })/// get
+  })
+  */
+}
+
+
+function getD(data){
+cust=[];
+  var val
+  for(var i=0; i<data.length;i++){
+  val=$('.csv .table tbody').find('tr:eq('+i+') td:eq(0)').text()  
+  cust.push([val,data[i][0],data[i][1],data[i][2]]);
+}
+console.log('pcust  '+cust[0])
+return cust
+}
+
+
+/////////////////////////////////////
+function selectTR(data){
+$('.csv .table tbody tr').on('click',function(){
+  console.log('tr on click')
+  var tableRow=$(this).index()
+  var tr={}
+  tr.date=data[tableRow][0];
+  tr.amt=data[tableRow][1];
+  tr.trans=data[tableRow][2];
+  console.log('row='+tableRow)
+  console.log('row data=='+data[tableRow])
+  console.log('tr data==='+tr.date+'   '+tr.amt+'   '+tr.trans)
+  console.log('in select tr custID=='+getCustID(tr,tableRow))
+})
+}
+
+function getCustID(tr,tableRow){
+//console.log('tr.trans.match(/,(.*),/)'+tr.trans.match(/,(.*),/))
+//console.log('tr.trans.match(/,(.*),/)[0]'+tr.trans.match(/,(.*),/)[0])
+//console.log('tr.trans.match(/,(.*),/)[1]'+tr.trans.match(/,(.*),/)[1])
+var name
+if(tr.trans.match(/,(.*),/)){
+    name=tr.trans.match(/,(.*),/)[1].trim();/// data between the commas
+//console.log('name====='+name)
+}
+else if(tr.trans.match(/.{12}$/)){
+  console.log('alternate  ---- name='+tr.trans.match(/.{12}$/))
+   name=tr.trans.match(/.{12}$/);
+} 
+var custID
+    if(tr.trans.match(/\d{8}/)){
+            var chk=tr.trans.match(/\d{8}/)[0].slice(4,6)
+            //console.log('regex=='+data[i][2].match(/\d{8}/)[0].slice(4,6))
+            //to validate 8 digit invoice # digit 5 and 6 give the end of
+            //quarter month (this is jan, apr, july or oct )
+
+            if(chk=='01'||chk=='04'||chk=='07'||chk=='10'){
+            var custID=tr.trans.match(/\d{8}/)[0].slice(0,4);
+            }   
+    }//if
+    if(custID){
+      $('.csv .table tbody tr:eq('+tableRow+') td:eq(0)')
+                      .text(custID);
+      return custID;
+    }
+    else {
+      var retval
+       $.get('csv/cust_id',{name: name},function(data){
+        console.log('data.length='+data.length);
+        if(!data.length){
+            
+                      noFindCustID(tr, tableRow);
+                      return
+                 
+        }//if
+        console.log('values='+data[0].id+' '+data[0].name+' '+data[0].prop)
+        var arr=[];
+        var Dta=[];
+        for(var i=0; i<data.length; i++){
+          if(!arr.includes(data[i].id)){
+            arr.push(data[i].id)
+            Dta.push([data[i].id, data[i].name, data[i].prop])
+            }// if statement
+          }// for loop
+        console.log('Dta=='+Dta.length+'   '+Dta[0][0]+Dta[0][1]+Dta[0][2])
+        $('#payment_ .modal-title').empty()
+                  .append('</br>'+tr.date+'  '+tr.amt+'  '+tr.trans)
+          $('#payment_ .modal-body #pay tbody').empty();
+          for(var i=0; i<Dta.length; i++){
+            $('#payment_ .modal-body #pay tbody')
+                  .append('<tr><td>'+Dta[i][0]+'</td><td>'
+                            +Dta[i][1]+'</td><td>'
+                            +Dta[i][2]+'</td></tr>')
+          }// for
+        $('#payment_').modal('show');//show payments
+        $('#payment_ .modal-body #pay tbody tr').on('click',function(){
+          var tableR=$(this).index()
+          console.log('tableRow='+tableR)
+          console.log('custID='+Dta[tableR][0]);
+          $('#payment_').modal('hide');//hide payments
+          $('.csv .table tbody tr:eq('+tableRow+') td:eq(0)')
+                      .text(Dta[tableR][0]);
+        })// on click
+        
+       });//// get
+     }//else
+    //}// if(custID=0)
+    
+
+}/// getCustID
+
+function noFindCustID(tr, tableRow){
+  console.log('in noFindCustID')
+  //$('.csv .table tbody tr:eq('+tableRow+') td:eq(0)')
+    //                  .text('no find');
+  var tag='#no_custID_ .modal-body #searchInput'
+  $('#no_custID_ .modal-title').empty()
+                  .append('</br>'+tr.date+'  '+tr.amt+'  '+tr.trans)
+  $('#no_custID_').modal('show');
+  $('#no_custID_ .modal-footer .confirm').hide();
+  $('#no_custID_ .modal-footer .skip').on('click',function(){
+    $('#no_custID_').modal('hide');
+    return
+  });
+  $('#no_custID_ .modal-footer .untraced').on('click',function(){
+    $('.csv .table tbody tr:eq('+tableRow+') td:eq(0)')
+                      .text('0');
+    $('#no_custID_').modal('hide');
+    return
+  });
+  $(tag).autocomplete({
+        appendTo: $(tag).parent(),
+        source: function(req, res){
+        
+        $.ajax({
+          url: '/csv/autocomplete',
+          data: {term:  req.term},
+  
+            success: function(data){
+              var len=data.length;
+              
+              var arr=new Array();
+                for (var i=0; i<len; i++){
+                  arr.push({label: data[i].prop, id: data[i].id});
+                }
+                
+              res(arr);
+            }///success
+            
+        });/// ajax
+      },//// source
+        minLength: 4,
+        select: function(event, ui){
+          console.log('prop='+ui.item.label+
+            ' custID='+ui.item.id);
+          $('#no_custID_ .modal-footer .confirm').show();
+          $('#no_custID_ .modal-body h4').append('custID='+ui.item.id+
+            ' prop=='+ui.item.label)
+          $('#no_custID_ .modal-footer .confirm').on('click',function(){
+            $('.csv .table tbody tr:eq('+tableRow+') td:eq(0)')
+                      .text(ui.item.id);
+            $('#no_custID_').modal('hide'); 
+
+          })
+          return
+
+        }
+      });//autocomplete
+        
+  
+}
+    ///////////////////////////////////
+function csvToMySqlDate(date){
+  var month=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var DD=date.slice(0,2);
+  var MM=date.slice(3,6);
+  var mm = month.indexOf(MM)+1;
+  mm=("0" + mm).slice(-2);
+  var YYYY='20'+date.slice(7,9);
+  //console.log('DD+MM+YYYY='+DD+'  '+mm+'  '+YYYY);
+  //console.log('date='+YYYY+'-'+mm+'-'+DD)
+  return YYYY+'-'+mm+'-'+DD;
+}
+
+function mySqlToCsv(date){
+  var month=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var DD=date.slice(8,10);
+  var MM=date.slice(5,7);
+  var mm=parseInt(MM);
+  mm=month[mm-1];
+  var YYYY=date.slice(2,4);
+  //console.log('mySqlToCsv='+YYYY+' '+MM+' '+DD+' month='+mm);
+  //console.log('date ++++++'+DD+'-'+mm+'-'+YYYY)
+  return DD+'-'+mm+'-'+YYYY;
+}
+
+
+});// doc ready
+
+
+</script>
+</html>

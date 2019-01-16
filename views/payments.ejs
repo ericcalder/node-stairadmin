@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+      <title><%= title %></title>
+      <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+      <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+      <!--
+      <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+  -->
+      
+    <link rel='stylesheet' href="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css">
+    <!--<link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+      -->
+<style>
+  #payments tbody tr:hover {
+    background-color: yellow;
+}
+
+
+
+
+
+</style>
+</head>
+
+
+<body>
+    
+
+  <h2>Payments Table</h2>
+
+  
+  <input id='fileLoad' type='file' accept='.csv'>
+  <table id='payments' class='table'>
+    <tbody>
+      <% for(var i=0; i< pdata.length; i++) { %>
+      <tr>
+        <td><%= pdata[i].id %></td>
+        <td><%= pdata[i].custID %></td>
+        <td><%= pdata[i].new_date %></td>
+        <td><%= pdata[i].amt %></td>
+        <td><%= pdata[i].trans %></td>
+        
+        </tr>
+      <% } %>
+    </tbody>
+  </table>
+  <button id='displayPay'>Show payments</button>
+  
+  <table id='test' class='table'>
+    <tbody>
+      
+    </tbody>  
+  </table>
+  
+
+  <div class="container">
+    <table class='table'>
+      <thead>
+      <th>Date</th>
+      <th>Amt</th>
+      <th>Transaction</th>
+      <th>Inv #</th>
+      <th>Name</th>
+    </thead>
+    <tbody></tbody>
+      
+    </table>
+    <p></p> 
+
+  </div> 
+</body>
+</html>
+<script>
+  $(document).ready(function(){
+
+  $('#displayPay').hide();
+  
+  $('#fileLoad').change(function(e){
+         console.log('in fileLoad');
+         var fileName=e.target.files[0].name;
+         console.log(fileName);
+         $.get('payments/download',{fileName: fileName},function(data){
+            console.log('in get data:::::');
+            console.log('length='+data.length)
+            console.log('length='+data[0][0])
+            for(var i=0; i<data.length;i++){
+            $('.container table tbody').append(
+              '<tr><td>'+data[i][0]+'</td><td>'+data[i][1]+
+              '</td><td>'+data[i][4]+'</td><td>'+
+              data[i][4].match(/\d{8}/))+'</td></tr>'
+            }
+           // window.location.replace('http://localhost:3000/csv/?fileName='
+                        //  +fileName);
+         })
+       
+       });
+$("#payments tbody tr").mouseover(function(){
+  console.log('on mouseover')
+  var custID=$(this).find("td").eq(1).text();
+  console.log('custID=='+custID)
+  if(custID!='0'){
+      $.get('payments/details',{custID: custID},function(data){
+        console.log('details'+data[0].name);
+        
+        $("#payments tbody tr").attr({
+          title: data[0].name+'  '+data[0].prop
+                                      })
+      });// get
+  }//iff
+  else
+    {$("#payments tbody tr").attr({title: 'NO custID'});
+  }// ELSE
+   
+}/// function
+);
+
+$('#payments tbody tr').on('click',function(){
+    console.log('button click');
+    var transaction=$(this).find("td").eq(4).text();
+    //console.log('transaction=='+transaction)
+    var name=transaction.match(/,(.*),/)[1].trim();
+    console.log('name=='+name)
+    var addr=transaction.match(/,(.*)/)[1].trim();
+    addr=addr.slice(addr.indexOf(',')+2);
+    console.log('addr=='+addr);
+    var custID=$(this).find("td").eq(1).text();
+    console.log('custID=='+custID)
+    if(custID=='0'){
+      console.log('custID====0')
+       $.get('payments/getCustID',{name: name},function(data){
+        console.log('getCustID'+JSON.stringify(data[1]));
+      });
+    }
+  });
+
+
+
+/*
+  $('#displayPay').off().on('click',function(){
+    console.log('button click')
+    $('#test tbody').append('<% for(var i=0; i< pdata.length; i++) { %>'+
+                            '<tr><td>'+'<%= pdata[i].id %></td>'+
+                            '<td><%= pdata[i].custID %></td>'+
+                            '<td><%= pdata[i].new_date %></td>'+
+                            '<td><%= pdata[i].amt %></td>'+
+                            '<td><%= pdata[i].trans %></td>'+
+                            '</tr>'+
+                            '<% } %>'
+                            )
+    $.get('payments/',function(data){
+      console.log('in get payments')
+    });
+  })
+*/
+  function csvToMySqlDate(date){
+  var month=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var DD=date.slice(0,2);
+  var MM=date.slice(3,6);
+  var mm = month.indexOf(MM)+1;
+  mm=("0" + mm).slice(-2);
+  var YYYY='20'+date.slice(7,9);
+  //console.log('DD+MM+YYYY='+DD+'  '+mm+'  '+YYYY);
+  //console.log('date='+YYYY+'-'+mm+'-'+DD)
+  return YYYY+'-'+mm+'-'+DD;
+}
+
+}); //document ready
+</script>
