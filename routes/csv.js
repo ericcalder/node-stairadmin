@@ -130,27 +130,6 @@ function insertRec(pay,arr,rec_added,res){
   }//for
 }
 
-/////////////////////////////////////////
-router.post('/append',function(req,res){
-  console.log('in /append')
-console.log('req.body'+req.body.payrows)
-console.log('req.body.payrows[0]'+JSON.parse(req.body.payrows)[0])
-var arr=[];
-for(var i=0;i<JSON.parse(req.body.payrows).length;i++){
-  arr.push(JSON.parse(req.body.payrows)[i])
-}
-var r={}
-r.id=JSON.parse(req.body.payrows)[0][0]
-r.custID=JSON.parse(req.body.payrows)[0][1]
-r.date=JSON.parse(req.body.payrows)[0][2]
-r.amt=JSON.parse(req.body.payrows)[0][3]
-r.trans=JSON.parse(req.body.payrows)[0][4]
-console.log('{r}==='+r.id+'  '+r.custID+'  '+r.amt+' '+r.date+'  '+r.trans)
-console.log('{r}+++++'+r)
-console.log('arr==='+arr)
-res.send(arr);
-})
-////////////////////////////////////////
 
 router.get('/cust_id',function(req,res){
 	console.log('in cust_id');
@@ -201,27 +180,7 @@ router.get('/autocomplete',function(req,res){
 
 })
 
-router.get('/fetch_dup', function(req,res){
-  console.log('/fetch_dup');
-  console.log('req.query='+req.query.tr.custID);
-  var set_qry="SET @date= STR_TO_DATE("+"'"+req.query.tr.date+"','%d-%b-%y');";
-  var qry="SELECT id, custID, tdate, amt, trans from payments "+
-          "WHERE custID="+req.query.tr.custID+
-          " AND amt="+req.query.tr.amt+
-          " AND (to_days(tdate) BETWEEN to_days(@date)-1"+
-          " AND to_days(@date)+1)"+
-          ";";
-  console.log('qry='+qry)
-  connection.query(set_qry, function(err,rows){
-          if(err) throw err;
-          //res.send(rows)
-        });
-  connection.query(qry, function(err,rows){
-          if(err) throw err;
-          res.send(rows)
-        });//conn
-  //res.end();
-})
+
 
 router.get('/payments',function(req,res){
   console.log('in get payments')
