@@ -186,7 +186,7 @@ router.get('/payments',function(req,res){
   console.log('in get payments')
   console.log('req.query=='+req.query.limit)
   var qry="SELECT id, custID, tdate, amt, trans from payments "+
-          "ORDER BY tdate DESC "+
+          "ORDER BY id DESC "+
           "LIMIT "+req.query.limit+";";
   console.log('qry=='+qry)
   connection.query(qry, function(err,rows){
@@ -196,6 +196,21 @@ router.get('/payments',function(req,res){
   //res.end();
 })
 
+router.get('/mouseover',function(req,res){
+  console.log('in mouseover')
+  console.log('req.query=='+req.query.custID)
+  var qry='select c.name, c.id, p.prop from customers'+
+      ' as c '+
+      ' inner join properties as p on c.property_id=p.id'+
+      ' where (c.id='+req.query.custID+');';
+  console.log('qry=='+qry)
+  connection.query(qry, function(err,rows){
+          if(err) throw err;
+          res.send(rows)
+        });//conn
+
+  //res.send('hello');
+})
 //////////////////////////////////
 function csvToMySqlDate(date){
   var month=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
